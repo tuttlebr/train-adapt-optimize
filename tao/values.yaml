@@ -52,8 +52,8 @@ tao:
                 - "8"
 
   # container to use for generating the workspace
-  imageName: tao-toolkit-tf
-  imageVersion: v3.21.11-tf1.15.4-py3
+  imageName: nvcr.io/nvaie/tao-toolkit-pyt-2-0
+  imageVersion: v3.22.02-py3
   pullPolicy: IfNotPresent
 
   # from the node described in affinity, nGPUs

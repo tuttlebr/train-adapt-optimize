@@ -54,7 +54,7 @@ spec:
     {{- end }}
       containers:
         - name: tao-client
-          image: "{{ .Values.imageurl }}/{{ .Values.tao_ngc_org }}/{{ .Values.tao_ngc_team }}/{{ .Values.tao.imageName }}:{{ .Values.tao.imageVersion }}"
+          image: "{{ .Values.tao.imageName }}:{{ .Values.tao.imageVersion }}"
           imagePullPolicy: {{ .Values.tao.pullPolicy }}
           workingDir: /workspace
           resources:
@@ -88,6 +88,8 @@ spec:
               name: workdir
             - mountPath: /models
               name: artifact-volume
+            - mountPath: /var/lib/docker
+              name: docker-sock
       imagePullSecrets:
         - name: imagepullsecret
       initContainers:
@@ -125,11 +127,14 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.modelRepoGenerator.ngcSecret}}
                   key: apikey
-
       volumes:
         - name: artifact-volume
           persistentVolumeClaim:
             claimName: artifact-volume-pvc
         - name: workdir
           persistentVolumeClaim:
-            claimName: workdir-pvc 
+            claimName: workdir-pvc
+        - name: docker-sock 
+          hostPath: 
+            path: /var/lib/docker
+            type: Socket
