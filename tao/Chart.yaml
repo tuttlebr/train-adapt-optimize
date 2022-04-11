@@ -1,0 +1,5 @@
+apiVersion: v2
+appVersion: "0.1.0"
+description: A python based AI toolkit for taking purpose-built pre-trained AI models and customizing them with your own data.
+name: tao
+version: 0.1.0

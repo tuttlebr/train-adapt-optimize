@@ -1,0 +1,19 @@
+--------------------------------------------------------------------------------
+{{ template "tao-server.name" . }} Installation Complete!
+
+Initialization Containers:
+    tao-model-init:
+    {{- toYaml .Values.modelRepoGenerator.ngcModelConfigs.cv | nindent 6 }}
+
+    tao-notebook-init:
+    {{- toYaml .Values.modelRepoGenerator.ngcModelConfigs.cvSamples | nindent 6 }}
+
+Volume Information:
+    kubectl get sc tao-api-sc
+    kubectl get pv artifact-volume-pv workdir-pv
+    kubectl get pvc artifact-volume-pvc workdir-pvc
+
+Monitor {{ template "tao-server.name" . }} by running the following kubelet commands:
+Workloads:
+    kubectl get all -l 'app in ({{ template "tao-server.name" . }})' -o wide
+--------------------------------------------------------------------------------

@@ -1,0 +1,135 @@
+# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "tao-server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "tao-server.name" . }}
+    chart: {{ template "tao-server.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "tao-server.name" . }}
+      release: {{ .Release.Name }}
+  serviceName: {{ template "tao-server.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "tao-server.name" . }}
+        release: {{ .Release.Name }}
+
+    spec:
+    {{- with .Values.tao.affinity }}
+      affinity:
+        {{- toYaml . | nindent 12 }}
+    {{- end }}
+      containers:
+        - name: tao-client
+          image: "{{ .Values.imageurl }}/{{ .Values.tao_ngc_org }}/{{ .Values.tao_ngc_team }}/{{ .Values.tao.imageName }}:{{ .Values.tao.imageVersion }}"
+          imagePullPolicy: {{ .Values.tao.pullPolicy }}
+          workingDir: /workspace
+          resources:
+            limits:
+              nvidia.com/gpu: {{ .Values.tao.numGpus }}
+          ports:
+            - containerPort: 8888
+              name: jupyter
+              protocol: TCP
+          args:
+            - jupyter
+            - notebook
+            - --ip=0.0.0.0
+            - --no-browser
+            - --allow-root
+            - --port=8888
+            - --NotebookApp.token=''
+            - --NotebookApp.password=''
+            - --NotebookApp.allow_origin='*'
+            - --NotebookApp.base_url=/
+          env:
+            - name: NGC_CLI_ORG
+              value: "nvidia"
+            - name: NGC_CLI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.modelRepoGenerator.ngcSecret}}
+                  key: apikey
+          volumeMounts:
+            - mountPath: /workspace
+              name: workdir
+            - mountPath: /models
+              name: artifact-volume
+      imagePullSecrets:
+        - name: imagepullsecret
+      initContainers:
+        - name: tao-model-init
+          image: "{{ .Values.modelRepoGenerator.imageRepository }}/{{ .Values.modelRepoGenerator.imageName }}:{{ .Values.modelRepoGenerator.imageVersion }}"
+          imagePullPolicy: {{ .Values.modelRepoGenerator.pullPolicy }}
+          workingDir: /models
+          volumeMounts:
+            - mountPath: /models
+              name: artifact-volume
+          command: ["/bin/bash"]
+          args: ["-c", "for model in {{ join " " .Values.modelRepoGenerator.ngcModelConfigs.cv }};do ngc registry model download-version {{ .Values.tao_ngc_org }}/{{ .Values.tao_ngc_team }}/${model}; done"]
+          env:
+            - name: NGC_CLI_ORG
+              value: "nvidia"
+            - name: NGC_CLI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.modelRepoGenerator.ngcSecret}}
+                  key: apikey
+        - name: tao-notebook-init
+          image: "{{ .Values.modelRepoGenerator.imageRepository }}/{{ .Values.modelRepoGenerator.imageName }}:{{ .Values.modelRepoGenerator.imageVersion }}"
+          imagePullPolicy: {{ .Values.modelRepoGenerator.pullPolicy }}
+          workingDir: /workspace
+          volumeMounts:
+            - mountPath: /workspace
+              name: workdir
+          command: ["/bin/bash"]
+          args: ["-c", "for notebook in {{ join " " .Values.modelRepoGenerator.ngcModelConfigs.cvSamples }};do ngc registry resource download-version {{ .Values.tao_ngc_org }}/{{ .Values.tao_ngc_team }}/${notebook}; done"]
+          env:
+            - name: NGC_CLI_ORG
+              value: "nvidia"
+            - name: NGC_CLI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.modelRepoGenerator.ngcSecret}}
+                  key: apikey
+
+      volumes:
+        - name: artifact-volume
+          persistentVolumeClaim:
+            claimName: artifact-volume-pvc
+        - name: workdir
+          persistentVolumeClaim:
+            claimName: workdir-pvc 

@@ -1,0 +1,27 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: workdir-pvc
+  labels:
+    app: {{ template "tao-server.name" . }}
+spec:
+  storageClassName: tao-api-sc
+  accessModes:
+      - ReadWriteMany
+  resources:
+    requests:
+      storage: 64Gi
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: artifact-volume-pvc
+  labels:
+    app: {{ template "tao-server.name" . }}
+spec:
+  storageClassName: tao-api-sc
+  accessModes:
+      - ReadWriteMany
+  resources:
+    requests:
+      storage: 64Gi

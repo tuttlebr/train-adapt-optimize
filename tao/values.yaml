@@ -1,0 +1,95 @@
+# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+replicaCount: 1
+
+imageurl: "nvcr.io"
+tao_ngc_org: "nvidia"
+tao_ngc_team: "tao"
+
+ngcCredentials:
+  registry: nvcr.io
+  username: $oauthtoken
+  password:
+  email:
+
+tao:
+  # k8s node affinity for scheduling
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+            - key: nvidia.com/gpu.count
+              operator: In
+              values:
+                - "1"
+                - "2"
+                - "4"
+                - "8"
+
+  # container to use for generating the workspace
+  imageName: tao-toolkit-tf
+  imageVersion: v3.21.11-tf1.15.4-py3
+  pullPolicy: IfNotPresent
+
+  # from the node described in affinity, nGPUs
+  numGpus: 1
+
+modelRepoGenerator:
+  # container to use for generating the workspace
+  # this already has ngc api installed...
+  imageRepository: nvcr.io/nvidia/riva
+  imageName: riva-speech
+  imageVersion: 2.0.0-servicemaker
+  pullPolicy: IfNotPresent
+  imagePullSecret: imagepullsecret
+  ngcSecret: modelpullsecret
+
+  # Config for computer vision models files in NGC
+  # cv_model_name:cv_model_tag
+  # more infor may be found at 
+  # https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tao/models/${cv_model_name}
+  # Similar to:
+  # ngc registry model download-version "nvidia/tao/pretrained_object_detection:cspdarknet_tiny"
+  ngcModelConfigs: 
+    cv:
+      - pretrained_detectnet_v2:resnet34
+      - pretrained_classification:cspdarknet_tiny
+      - pretrained_efficientdet:efficientnet_b2
+      - pretrained_instance_segmentation:resnet10
+      - pretrained_object_detection:cspdarknet_tiny
+      - pretrained_semantic_segmentation:vgg19
+    cvSamples:
+      - cv_samples:v1.3.0
+
+  nfs:
+    path: /volume1/brandon/taoartifacts
+    server: 192.168.1.232
+
+client:
+  type: NodePort
+  nodeport: 30888
