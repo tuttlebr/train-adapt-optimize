@@ -88,7 +88,7 @@ spec:
               name: workdir
             - mountPath: /models
               name: artifact-volume
-            - mountPath: /var/lib/docker
+            - mountPath: /var/run/docker.sock
               name: docker-sock
       imagePullSecrets:
         - name: imagepullsecret
@@ -136,5 +136,5 @@ spec:
             claimName: workdir-pvc
         - name: docker-sock 
           hostPath: 
-            path: /var/lib/docker
+            path: /var/run/docker.sock
             type: Socket
